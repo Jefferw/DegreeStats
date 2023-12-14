@@ -1,0 +1,312 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html><head></head><body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div>
+
+
+
+<h1 class="title toc-ignore">MA342_Project_Analysis.R</h1>
+<h4 class="author">crane</h4>
+<h4 class="date">2023-11-27</h4>
+
+</div>
+
+
+<pre class="r"><code>options(scipen=999, warn = -1)
+library(tidyverse)</code></pre>
+<pre><code>## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+## ✔ dplyr     1.1.2     ✔ readr     2.1.4
+## ✔ forcats   1.0.0     ✔ stringr   1.5.0
+## ✔ ggplot2   3.4.3     ✔ tibble    3.2.1
+## ✔ lubridate 1.9.2     ✔ tidyr     1.3.0
+## ✔ purrr     1.0.2     
+## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()
+## ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
+<pre class="r"><code>library(plotly)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;plotly&#39;
+## 
+## The following object is masked from &#39;package:ggplot2&#39;:
+## 
+##     last_plot
+## 
+## The following object is masked from &#39;package:stats&#39;:
+## 
+##     filter
+## 
+## The following object is masked from &#39;package:graphics&#39;:
+## 
+##     layout</code></pre>
+<pre class="r"><code>courses &lt;- as_tibble(read.csv(&quot;C:/Users/crane/Documents/MA342/Project/courses.csv&quot;))
+institutions &lt;- read.csv(&quot;C:/Users/crane/Documents/MA342/Project/Institutions.csv&quot;)
+
+
+#remove special characters in tuition, fees, placement, and wage columns
+#forcing  columns as numeric replaces the ^ and - characters present in data set to NA, which is what we want
+courses &lt;- courses %&gt;%
+  mutate(inst_id = as.numeric(inst_id)) %&gt;%
+  mutate(AnnualTuition = as.numeric(str_replace(AnnualTuition, &quot;[$%]&quot;, &quot;&quot;))) %&gt;%
+  mutate(AnnualFees = as.numeric(str_replace(AnnualFees, &quot;[$%]&quot;, &quot;&quot;))) %&gt;%
+  mutate(Placement = as.numeric(str_replace(Placement, &quot;[$%]&quot;, &quot;&quot;))) %&gt;%
+  mutate(MedWageEntry = as.numeric(str_replace(MedWageEntry, &quot;[$%]&quot;, &quot;&quot;))) %&gt;%
+  mutate(MedWage5yr = as.numeric(str_replace(MedWage5yr, &quot;[$%]&quot;, &quot;&quot;)))
+
+#add columns for total cost per year
+courses &lt;- courses %&gt;%
+  mutate(AnnualCost = AnnualTuition + AnnualFees) %&gt;%
+  mutate(TotalEstimatedCost = (RequiredHours/30)*AnnualCost) %&gt;%
+  mutate(Med5YrValue = MedWage5yr/TotalEstimatedCost) %&gt;%
+  mutate(MedEntryValue = MedWageEntry/TotalEstimatedCost)
+
+
+#__________________________________________________________________________________________________
+#plot showing cost of degree vs median entry wage  of all degrees, color by required hours
+#these two plots best answer the question, what degree from KHE schools have the best value
+#both of these plots are interactive, meaning they show additional information when you
+#hover over one of the data points but must be viewed as an html file
+plt1 &lt;- courses %&gt;%
+  left_join(institutions, by = &quot;inst_id&quot;) %&gt;%
+  filter(TotalEstimatedCost &lt; 75000) %&gt;%
+  ggplot() +
+  geom_point(mapping = aes(x = TotalEstimatedCost, y = MedWageEntry, color = RequiredHours, text = paste0(DegreeTitle, &quot; &quot;, InstitutionName))) +
+  ggtitle(&quot;Total Cost versus Median Entry Level Salary&quot;)
+
+ggplotly(plt1)</code></pre>
+<div class="plotly html-widget html-fill-item" style="width:672px;height:480px;"></div>
+
+<pre class="r"><code>plt2 &lt;- courses %&gt;%
+  left_join(institutions, by = &quot;inst_id&quot;) %&gt;%
+  filter(TotalEstimatedCost &lt; 75000) %&gt;%
+  ggplot() +
+  geom_point(mapping = aes(x = TotalEstimatedCost, y = MedWage5yr, color = RequiredHours, text = paste0(DegreeTitle, &quot; &quot;, InstitutionName))) +
+  ggtitle(&quot;Total Cost versus Median Salary After 5 years&quot;)
+
+ggplotly(plt2)</code></pre>
+<div class="plotly html-widget html-fill-item" style="width:672px;height:480px;"></div>
+
+<pre class="r"><code>plt3 &lt;- courses %&gt;%
+  left_join(institutions, by = &quot;inst_id&quot;) %&gt;%
+  ggplot()+
+  geom_point(mapping = aes(x = TotalEstimatedCost, y = Placement, color = RequiredHours, text = paste0(DegreeTitle, &quot; &quot;, InstitutionName))) +
+  ggtitle(&quot;Total Cost vs Placement%&quot;)
+
+ ggplotly(plt3)</code></pre>
+<div class="plotly html-widget html-fill-item" style="width:672px;height:480px;"></div>
+
+<pre class="r"><code> #Using the results of these 3 charts, we can make a determination that associates degrees
+ #have the highest value in terms of cost vs wage and placement percentages
+ 
+ #its also interesting to note that the points are in 3 distinct groups based on cost
+ #1) two year colleges &lt;20000
+ #2) Fort Hayes, Pittsburg, Emporia &gt;20000 and &lt; 40000
+ #3) KU, KSU, WSU, WU &gt;40000
+ 
+ #obviously an associates degree isn&#39;t not for everyone, so below is a graph of just the bachelors degrees
+ plt4 &lt;- courses %&gt;%
+   left_join(institutions, by = &quot;inst_id&quot;) %&gt;%
+   filter(RequiredHours &gt;= 120) %&gt;%
+   ggplot() +
+   geom_point(mapping = aes(x = TotalEstimatedCost, y = MedWage5yr, color = RequiredHours, text = paste0(DegreeTitle, &quot; &quot;, InstitutionName))) +
+   ggtitle(&quot;Total Cost versus Median Salary After 5 years (Bachelors Degrees)&quot;)
+ 
+ ggplotly(plt4)</code></pre>
+<div class="plotly html-widget html-fill-item" style="width:672px;height:480px;"></div>
+
+<pre class="r"><code>#___________________________________________________________________________________________________
+
+#plot showing distribution of wages by university
+courses %&gt;%
+  left_join(institutions, by = &quot;inst_id&quot;) %&gt;%
+  filter(inst_type %in% c(&quot;State University&quot;, &quot;Municipal University&quot;)) %&gt;%
+  ggplot() +
+  geom_boxplot(mapping = aes(x = InstitutionName, y = MedWageEntry)) +
+  coord_flip()</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<pre class="r"><code>#placement by university
+courses %&gt;%
+  left_join(institutions, by = &quot;inst_id&quot;) %&gt;%
+  filter(inst_type %in% c(&quot;State University&quot;, &quot;Municipal University&quot;)) %&gt;%
+  ggplot() +
+  geom_boxplot(mapping = aes(x = InstitutionName, y = Placement)) +
+  coord_flip()</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<pre class="r"><code>#university by costs
+courses %&gt;%
+  left_join(institutions, by = &quot;inst_id&quot;) %&gt;%
+  filter(inst_type %in% c(&quot;State University&quot;, &quot;Municipal University&quot;)) %&gt;%
+  ggplot() +
+  geom_boxplot(mapping = aes(x = InstitutionName, y = TotalEstimatedCost)) +
+  coord_flip()</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<pre class="r"><code>#find highest paying degrees
+courses %&gt;%
+  group_by(DegreeTitle) %&gt;%
+  summarize(meanWage = mean(MedWage5yr, na.rm = TRUE)) %&gt;%
+  arrange(desc(meanWage))</code></pre>
+<pre><code>## # A tibble: 434 &#215; 2
+##    DegreeTitle                        meanWage
+##    &lt;chr&gt;                                 &lt;dbl&gt;
+##  1 BUSINESS ANALYTICS                  107783 
+##  2 ELECTRICAL &amp; POWER TRANSMISSION     103802 
+##  3 ARCHITECTURAL ENGINEERING           103643 
+##  4 ELECTRONICS ENGINEERING TECHNOLOGY  102894 
+##  5 COMPUTER ENGINEERING                101775.
+##  6 APPLIED COMPUTING                   101604 
+##  7 ELECTRIC POWER AND DISTRIBUTION     101415 
+##  8 ELECTRICAL ENGINEERING               99578 
+##  9 COMPUTER SCIENCE                     95220.
+## 10 PETROLEUM ENGINEERING                94728 
+## # ℹ 424 more rows</code></pre>
+<pre class="r"><code>#find which degrees/programs have highest wage vs cost
+courses %&gt;%
+  group_by(DegreeTitle) %&gt;%
+  summarize(meanValue = mean(Med5YrValue, na.rm = TRUE), meanWage = mean(MedWage5yr, na.rm = TRUE), n = n()) %&gt;%
+  filter(n &gt; 4) %&gt;%
+  arrange(desc(meanValue))</code></pre>
+<pre><code>## # A tibble: 39 &#215; 4
+##    DegreeTitle                                          meanValue meanWage     n
+##    &lt;chr&gt;                                                    &lt;dbl&gt;    &lt;dbl&gt; &lt;int&gt;
+##  1 COSMETOLOGY                                               6.07   38076      5
+##  2 LIBERAL ARTS AND SCIENCES, GENERAL STUDIES AND HUMA…      5.50   43052.    10
+##  3 WELDING TECHNOLOGY                                        5.40   51550      7
+##  4 AA, AS, AGS DEGREES (TRANSFER DEGREES)                    5.10   43240.    17
+##  5 AUTOMOTIVE TECHNOLOGY                                     4.66   56143.    13
+##  6 ELECTRICAL TECHNOLOGY                                     4.36   53807.     6
+##  7 DIESEL TECHNOLOGY                                         4.24   54065.     5
+##  8 PHYSICAL THERAPIST ASSISTANT                              4.12   49155      5
+##  9 LIBERAL STUDIES                                           4.05   41600.     9
+## 10 SURGICAL TECHNOLOGY                                       3.93   48051.     5
+## # ℹ 29 more rows</code></pre>
+<pre class="r"><code>#compare wages by inst type
+courses %&gt;%
+  left_join(institutions, by = &quot;inst_id&quot;) %&gt;%
+  group_by(inst_type) %&gt;%
+  filter(!is.na(inst_type)) %&gt;%
+  ggplot() +
+  geom_boxplot(mapping = aes(x = inst_type, y = MedWageEntry)) +
+  coord_flip()</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<pre class="r"><code>courses %&gt;%
+  left_join(institutions, by = &quot;inst_id&quot;) %&gt;%
+  group_by(inst_type) %&gt;%
+  filter(!is.na(inst_type)) %&gt;%
+  ggplot() +
+  geom_boxplot(mapping = aes(x = inst_type, y = MedWage5yr)) +
+  coord_flip()</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<pre class="r"><code>#compare only engineering degrees
+courses %&gt;%
+  left_join(institutions, by = &quot;inst_id&quot;) %&gt;%
+  filter(str_detect(DegreeTitle, &quot;ENGINEERING&quot;)) %&gt;%
+  filter(inst_type %in% c(&quot;State University&quot;, &quot;Municipal University&quot;)) %&gt;%
+  ggplot() +
+  geom_boxplot(mapping = aes(x = InstitutionName, y = MedWage5yr)) +
+  coord_flip()</code></pre>
+<p><img src="javascript://" width="672"/></p>
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="module" src="https://s.brightspace.com/lib/bsi/20.23.11-218/unbundled/mathjax.js"></script><script type="text/javascript">document.addEventListener('DOMContentLoaded', function() {
+					if (document.querySelector('math') || /\$\$|\\\(|\\\[|\\begin{|\\ref{|\\eqref{/.test(document.body.innerHTML)) {
+						document.querySelectorAll('mspace[linebreak="newline"]').forEach(elm => {
+							elm.setAttribute('style', 'display: block; height: 0.5rem;');
+						});
+
+						window.D2L.MathJax.loadMathJax({
+							'outputScale': 1.5,
+							'renderLatex': true
+						});
+					}
+				});</script><script type="module" src="https://s.brightspace.com/lib/bsi/20.23.11-218/unbundled/prism.js"></script><script type="text/javascript">document.addEventListener('DOMContentLoaded', function() {
+					document.querySelectorAll('.d2l-code').forEach(code => {
+						window.D2L.Prism.formatCodeElement(code);
+					});
+				});</script></body></html>
